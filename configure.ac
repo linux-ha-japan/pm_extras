@@ -3,10 +3,13 @@
 
 AC_PREREQ(2.59)
 #AC_INIT(FULL-PACKAGE-NAME, VERSION, BUG-REPORT-ADDRESS)
-AC_INIT(pm_extras, 1.1)
-AM_INIT_AUTOMAKE(pm_extras, 1.1)
+AC_INIT(pm_extras, 2.0)
+AM_INIT_AUTOMAKE(pm_extras, 2.0)
 AC_PROG_CC
 AC_PROG_LIBTOOL
+
+# use when make rpm
+AC_SUBST(WITH_LIST, [""])
 
 extract_header_define() {
           AC_MSG_CHECKING(for $2 in $1)
@@ -24,21 +27,100 @@ extract_header_define() {
 # Checks for programs.
 
 # Checks for libraries.
+corosync_version=2.0
+pacemaker_version=1.1
+PKG_CHECK_MODULES([GLIB], [glib-2.0])
+PKG_CHECK_MODULES([COROSYNC], [corosync >= ${corosync_version}])
+PKG_CHECK_MODULES([PACEMAKER], [pacemaker >= ${pacemaker_version}])
+AC_CHECK_LIB([cmap],
+	[cmap_track_add], 
+	[], 
+	[AC_MSG_ERROR("Not found cmap_track_add in libcmap")]
+	)
+AC_CHECK_LIB([cfg],
+	[corosync_cfg_ring_status_get],
+	[],
+	[AC_MSG_ERROR("Not found corosync_cfg_ring_status_get in libcfg")]
+	)
+AC_CHECK_LIB([crmcommon],
+	[crm_log_init],
+	[],
+	[AC_MSG_ERROR("Not found crm_log_init in libcrmcommon")]
+	)
+AC_CHECK_LIB([qb],
+	[qb_log_from_external_source],
+	[],
+	[AC_MSG_ERROR("Not found qb_log_from_external_source in libqb")],
+	)
+AC_CHECK_LIB([glib-2.0],
+	[g_main_loop_run],
+	[],
+	[AC_MSG_ERROR("Not found g_main_loop in libglib-2.0")],
+	)
+# Checks for options
+AC_ARG_ENABLE([debug],
+	[AS_HELP_STRING([--enable-debug],
+		[enable debug mode (default is no)])],
+	[],
+	[debug=no] 
+	)
+
+AC_ARG_ENABLE([upstart],
+	[AS_HELP_STRING([--enable-upstart],
+		[support for the Upstart (default is no)])],
+	[],
+	[enable_upstart=no] 
+	)
+AM_CONDITIONAL(SUPPORT_UPSTART, [test x"${enable_upstart}" = x"yes"])
+
+AC_ARG_ENABLE([systemd],
+	[AS_HELP_STRING([--enable-systemd],
+		[support for the Systemd (default is no)])],
+	[],
+	[enable_systemd=no] 
+	)
+AM_CONDITIONAL(SUPPORT_SYSTEMD, [test x"${enable_systemd}" = x"yes"])
+
+if test "x${enable_debug}" = x"yes"; then
+	CFLAGS="-g -O0"
+fi
+
+if test "x${enable_upstart}" = x"yes"; then
+	AC_CHECK_PROG([UPSTART], [initctl], [yes], [no])
+	if test "x${UPSTART}" = x"no"; then
+		AC_MSG_ERROR("Not found initctl")
+	fi
+	WITH_LIST="${WITH_LIST} --with upstart"
+	PACKAGE_FEATURES="$PACKAGE_FEATURES upstart"
+fi
+
+if test "x${enable_systemd}" = x"yes"; then
+	AC_CHECK_PROG([SYSTEMD], [systemctl], [yes], [no])
+	if test "x${SYSTEMD}" = x"no"; then
+		AC_MSG_ERROR("Not found systemctl")
+	fi
+	WITH_LIST="${WITH_LIST} --with systemd"
+	PACKAGE_FEATURES="$PACKAGE_FEATURES systemd"
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 dnl Fix default variables - "prefix" variable if not specified
+
 if test "$prefix" = "NONE"; then
 	prefix="/usr"
 
 	dnl Fix "localstatedir" variable if not specified
+	
 	if test "$localstatedir" = "\${prefix}/var"; then
 		localstatedir="/var"
 	fi
 	dnl Fix "sysconfdir" variable if not specified
+	
 	if test "$sysconfdir" = "\${prefix}/etc"; then
 		sysconfdir="/etc"
 	fi
 	dnl Fix "libdir" variable if not specified
+	
 	if test "$libdir" = "\${exec_prefix}/lib"; then
 		if test -e /usr/lib64; then
 			libdir="/usr/lib64"
@@ -49,27 +131,73 @@ if test "$prefix" = "NONE"; then
 fi
 
 # Checks for header files.
-CFLAGS="$CFLAGS -I${prefix}/include/heartbeat"
-CFLAGS="$CFLAGS -I${prefix}/include/pacemaker"
-CFLAGS="$CFLAGS -I${prefix}/include/corosync"
+INC_FLAGS="-I${prefix}/include/heartbeat"
+INC_FLAGS="$INC_FLAGS -I${prefix}/include/pacemaker"
+INC_FLAGS="$INC_FLAGS -I${prefix}/include/corosync"
+INC_FLAGS="$INC_FLAGS -I${prefix}/include/glib-2.0"
+INC_FLAGS="$INC_FLAGS -I/usr/lib64/glib-2.0/include"
+INC_FLAGS="$INC_FLAGS -I/usr/include/libxml2"
 
-AC_CHECK_HEADERS(hb_config.h)
-AC_CHECK_HEADERS(glue_config.h)
-AC_CHECK_HEADERS(agent_config.h)
-AC_CHECK_HEADERS(cs_config.h)
+CFLAGS="${CFLAGS} ${INC_FLAGS}"
+CPPFLAGS="${CPPFLAGS} ${INC_FLAGS}"
 
-GLUE_HEADER=none
-if test "$ac_cv_header_glue_config_h" = "yes"; then
-   GLUE_HEADER=glue_config.h
-elif test "$ac_cv_header_hb_config_h" = "yes"; then
-   GLUE_HEADER=hb_config.h
-else
-   AC_MSG_FAILURE(Core development headers were not found)
-fi
+# ifcheckd
+AC_CHECK_HEADER([corosync/cfg.h],
+	[],
+	[AC_MSG_ERROR("Not found corosync/cfg.h")]
+	)
+AC_CHECK_HEADER([corosync/cmap.h],
+	[],
+	[AC_MSG_ERROR("Not found corosync/cmap.h")]
+	)
+AC_CHECK_HEADER([crm/attrd.h],
+	[],
+	[AC_MSG_ERROR("Not found crm/attrd.h")]
+	)
+AC_CHECK_HEADER([crm/common/mainloop.h],
+	[],
+	[AC_MSG_ERROR("Not found crm/common/mainloop.h")]
+	)
 
-LCRSODIR=`extract_header_define cs_config.h LCRSODIR`
-AC_DEFINE_UNQUOTED(LCRSODIR,"$LCRSODIR", corosync lcrso directory)
-AC_SUBST(LCRSODIR)
+# RA
+AC_CHECK_HEADER([glue_config.h],
+	[GLUE_HEADER=glue_config.h],
+	[AC_MSG_ERROR("Not found glue_confi.h")]
+	)
+AC_CHECK_HEADER([agent_config.h],
+	[AGENT_CONFIG_HEADER=agent_config.h],
+	[AC_MSG_ERROR("Not found agent_config.h")]
+	)
+AC_CHECK_HEADER([crm_config.h],
+	[CRM_CONFIG_HEADER=crm_config.h],
+	[AC_MSG_ERROR("Not found crm_config.h")]
+	)
+
+AC_CHECK_DECL([OCF_RA_DIR],
+	[],
+	[AC_MSG_ERROR("Not found OCF_RA_DIR in ${GLUE_HEADER}")],
+	[[#include <${GLUE_HEADER}>]]
+	)
+AC_CHECK_DECL([STONITH_EXT_PLUGINDIR],
+	[],
+	[AC_MSG_ERROR("Not found STONITH_EXT_PLUGINDIR in ${GLUE_HEADER}")],
+	[[#include <${GLUE_HEADER}>]]
+	)
+AC_CHECK_DECL([HA_APIGROUP],
+	[],
+	[AC_MSG_ERROR("Not found HA_APIGROUP in ${GLUE_HEADER}")],
+	[[#include <${GLUE_HEADER}>]]
+	)
+AC_CHECK_DECL([HA_CCMUSER],
+	[],
+	[AC_MSG_ERROR("Not found HA_CCMUSER in ${GLUE_HEADER}")],
+	[[#include <${GLUE_HEADER}>]]
+	)
+AC_CHECK_DECL([CRM_DAEMON_DIR],
+	[],
+	[AC_MSG_ERROR("Not found CRM_DAEMON_DIR in ${CRM_CONFIG_HEADER}")],
+	[[#include <${CRM_CONFIG_HEADER}>]]
+	)
 
 OCFDIR=`extract_header_define $GLUE_HEADER OCF_RA_DIR`
 AC_DEFINE_UNQUOTED(OCFDIR,"$OCFDIR", ocf resource directory)
@@ -79,7 +207,7 @@ EXTDIR=`extract_header_define $GLUE_HEADER STONITH_EXT_PLUGINDIR`
 AC_DEFINE_UNQUOTED(EXTDIR,"$EXTDIR", stonith external plugin directory)
 AC_SUBST(EXTDIR)
 
-CRM_DAEMON_DIR=`extract_header_define crm_config.h CRM_DAEMON_DIR`
+CRM_DAEMON_DIR=`extract_header_define $CRM_CONFIG_HEADER CRM_DAEMON_DIR`
 AC_DEFINE_UNQUOTED(CRM_DAEMON_DIR,"$CRM_DAEMON_DIR", crm daemon directory)
 AC_SUBST(CRM_DAEMON_DIR)
 
@@ -146,4 +274,7 @@ AC_MSG_RESULT([  HA group name            = ${CRM_DAEMON_GROUP}])
 AC_MSG_RESULT([  HA user name             = ${CRM_DAEMON_USER}])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([  CFLAGS                   = ${CFLAGS}])
-
+AC_MSG_RESULT([  CPPFLAGS                 = ${CPPFLAGS}])
+AC_MSG_RESULT([  LIBS                     = ${LIBS}])
+AC_MSG_RESULT([])
+AC_MSG_RESULT([  Features                 = ${PACKAGE_FEATURES}])

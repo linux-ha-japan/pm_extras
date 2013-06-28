@@ -1,0 +1,15 @@
+# ifcheckd - Daemon for send corosync link status to attribute
+
+[Unit]
+Description=ifcheckd daemon
+After=multi-user.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/ifcheckd.pid
+ExecStart=/usr/sbin/ifcheckd
+Restart=always
+TimeoutStopSec=60min
+
+[Install]
+WantedBy=multi-user.target

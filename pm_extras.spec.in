@@ -3,16 +3,17 @@
 ########################################
 %define __check_files %{nil}
 %define name pm_extras
-%define version 1.1
+%define version 2.0
 %define release 1.el@RHEL_VER@
 %define prefix /usr
 %define libdir	%{_libdir}
+# rpmbuild --with ...
+%bcond_with upstart
+%bcond_with systemd
 #
 %define ocfdir /usr/lib/ocf/resource.d/heartbeat
 %define extdir %{_libdir}/stonith/plugins/external
-%define lcrsodir %{_libexecdir}/lcrso
-#
-#
+%{?with_upstart:%define _upstartdir %{_sysconfdir}/init}
 #
 Summary: Extra Tools & Scripts for Pacemaker 
 Name: %{name}
@@ -23,8 +24,8 @@ Source: %{name}-%{version}.tar.gz
 License: GPL
 Vendor: NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 BuildRoot: %{_tmppath}/%{name}-%{version}
-BuildRequires: make, pacemaker-libs-devel >= 1.0.9, heartbeat-devel >= 3.0.3, cluster-glue-libs-devel >= 1.0.6, corosynclib-devel >= 1.2.7
-Requires: pacemaker >= 1.0.9, resource-agents >= 1.0.3, cluster-glue >= 1.0.6, heartbeat >= 3.0.3
+BuildRequires: make, pacemaker-libs-devel >= 1.1.0, cluster-glue-libs-devel >= 1.0.6, corosynclib-devel >= 2.0.0
+Requires: pacemaker >= 1.1.0, resource-agents >= 1.0.3, cluster-glue >= 1.0.6
 
 ########################################
 %description
@@ -35,43 +36,27 @@ Extra Scripts
            and 
      cluster-glue 1.0.6
 
- * 2010/10/6
+ * 2013/06/12
    * RA NVclient 1.4
    * RA VIPcheck 1.1
    * plugin stonith-helper 1.0
-   * tool ifcheckd 1.0 for Heartbeat
-   * tool iface_check.lcrso 1.0 for Corosync
-    - The use is going to be enabled after corosync-2.0.
+   * tool ifcheckd 1.0 for Corosync-2.0
 
-########################################
 %prep
-########################################
 rm -rf $RPM_BUILD_ROOT
-
-########################################
 %setup -q
-########################################
 
-########################################
 %build
-########################################
+%{configure} \
+%{?with_upstart:--enable-upstart} \
+%{?with_systemd:--enable-systemd}
 
-########################################
-%configure
-########################################
-
-########################################
 %pre
-########################################
 
-########################################
 %install
-########################################
 make DESTDIR=$RPM_BUILD_ROOT install
 
-########################################
 %clean
-########################################
 if
 	[ -n "${RPM_BUILD_ROOT}"  -a "${RPM_BUILD_ROOT}" != "/" ]
 then
@@ -79,21 +64,13 @@ then
 fi
 rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 
-########################################
 %post
-########################################
 
-########################################
 %preun
-########################################
 
-########################################
 %postun
-########################################
 
-########################################
 %files
-########################################
 %defattr(-,root,root)
 
 %dir %{ocfdir}
@@ -103,17 +80,16 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 %dir %{extdir}
 %attr (755, root, root) %{extdir}/stonith-helper
 
-%attr (-,root,haclient) %{_libdir}/heartbeat/ifcheckd
-%dir %{lcrsodir}
-%attr (755, root, root) %{lcrsodir}/iface_check.lcrso
+%attr (-,root,root) %{_sbindir}/ifcheckd
+
+%{?with_upstart:%attr (644, root, root) %{_upstartdir}/ifcheckd.conf}
+
+%{?with_systemd:%attr (644, root, root) %{_unitdir}/ifcheckd.service}
 
 %doc %{_docdir}/pm_extras/README
 %doc %{_docdir}/pm_extras/HowToBuild_pm_extras.txt
 
-
-########################################
 %changelog
-########################################
 * Fri May 13 2011 Hideo Yamauchi <yamauchi@matrixjpn.com>
 * Wed Oct 6 2010 Yuusuke IIDA <iidayuus@intellilink.co.jp>
 - initial release
