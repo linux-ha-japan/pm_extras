@@ -368,7 +368,7 @@ _delete_attr_iface(uint32_t iface_no,
         return FALSE;
     }
     if (attrd_update_delegate(NULL, 'D', NULL, if_attr, if_value,
-                    attr_section, attr_set, NULL, NULL ) != pcmk_ok) {
+                    attr_section, attr_set, NULL, NULL, FALSE) != pcmk_ok) {
         crm_debug("Could not delete %s", if_attr);
         return FALSE;
     }
@@ -406,7 +406,7 @@ _update_attr_iface(uint32_t iface_no,
         return FALSE;
     }
     if (attrd_update_delegate(NULL, 'U', NULL, if_attr, if_value,
-                    attr_section, attr_set, NULL, NULL ) != pcmk_ok) {
+                    attr_section, attr_set, NULL, NULL, FALSE) != pcmk_ok) {
         crm_debug("Could not update %s=%s", if_attr, if_value);
         return FALSE;
     }
