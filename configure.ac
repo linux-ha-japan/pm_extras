@@ -150,14 +150,6 @@ AC_CHECK_HEADER([corosync/cmap.h],
 	[],
 	[AC_MSG_ERROR("Not found corosync/cmap.h")]
 	)
-AC_CHECK_HEADER([crm/attrd.h],
-	[],
-	[AC_MSG_ERROR("Not found crm/attrd.h")]
-	)
-AC_CHECK_HEADER([crm/common/mainloop.h],
-	[],
-	[AC_MSG_ERROR("Not found crm/common/mainloop.h")]
-	)
 
 # RA
 AC_CHECK_HEADER([glue_config.h],
