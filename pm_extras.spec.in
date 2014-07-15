@@ -13,7 +13,6 @@
 #
 %define ocfdir /usr/lib/ocf/resource.d/heartbeat
 %define extdir %{_libdir}/stonith/plugins/external
-%{?with_upstart:%define _upstartdir %{_sysconfdir}/init}
 #
 Summary: Extra Tools & Scripts for Pacemaker 
 Name: %{name}
@@ -56,6 +55,12 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 %post
 
 %preun
+%if %{with systemd}
+%systemd_preun ifcheckd.service
+%endif
+%if %{with upstart}
+/sbin/initctl stop ifcheckd > /dev/null 2>&1 || :
+%endif
 
 %postun
 
@@ -71,7 +76,7 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 
 %attr (-,root,root) %{_sbindir}/ifcheckd
 
-%{?with_upstart:%attr (644, root, root) %{_upstartdir}/ifcheckd.conf}
+%{?with_upstart:%attr (644, root, root) %{_sysconfdir}/init/ifcheckd.conf}
 
 %{?with_systemd:%attr (644, root, root) %{_unitdir}/ifcheckd.service}
 
