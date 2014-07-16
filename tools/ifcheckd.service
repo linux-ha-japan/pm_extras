@@ -10,6 +10,7 @@ PIDFile=/var/run/ifcheckd.pid
 ExecStart=/usr/sbin/ifcheckd
 Restart=always
 TimeoutStopSec=60min
+EnvironmentFile=-/etc/sysconfig/pacemaker
 
 [Install]
 WantedBy=multi-user.target
