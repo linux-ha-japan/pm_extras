@@ -67,17 +67,17 @@ AC_ARG_ENABLE([debug],
 
 AC_ARG_ENABLE([upstart],
 	[AS_HELP_STRING([--enable-upstart],
-		[support for the Upstart (default is no)])],
+		[support for the Upstart (default is auto)])],
 	[],
-	[enable_upstart=no] 
+	[enable_upstart=auto] 
 	)
 AM_CONDITIONAL(SUPPORT_UPSTART, [test x"${enable_upstart}" = x"yes"])
 
 AC_ARG_ENABLE([systemd],
 	[AS_HELP_STRING([--enable-systemd],
-		[support for the Systemd (default is no)])],
+		[support for the Systemd (default is auto)])],
 	[],
-	[enable_systemd=no] 
+	[enable_systemd=auto] 
 	)
 AM_CONDITIONAL(SUPPORT_SYSTEMD, [test x"${enable_systemd}" = x"yes"])
 
@@ -85,23 +85,28 @@ if test "x${enable_debug}" = x"yes"; then
 	CFLAGS="-g -O0"
 fi
 
-if test "x${enable_upstart}" = x"yes"; then
-	AC_CHECK_PROG([UPSTART], [initctl], [yes], [no])
-	if test "x${UPSTART}" = x"no"; then
-		AC_MSG_ERROR("Not found initctl")
+AC_CHECK_PROG([UPSTART], [initctl], [yes], [no])
+if test "x${UPSTART}" = x"yes"; then
+	if test "x${enable_upstart}" = x"yes" -o "x${enable_upstart}" = x"auto"; then
+		WITH_LIST="${WITH_LIST} --with upstart"
+		PACKAGE_FEATURES="$PACKAGE_FEATURES upstart"
 	fi
-	WITH_LIST="${WITH_LIST} --with upstart"
-	PACKAGE_FEATURES="$PACKAGE_FEATURES upstart"
+elif test "x${enable_upstart}" = x"yes"; then
+	AC_MSG_ERROR("Not found initctl")
 fi
 
-if test "x${enable_systemd}" = x"yes"; then
-	AC_CHECK_PROG([SYSTEMD], [systemctl], [yes], [no])
-	if test "x${SYSTEMD}" = x"no"; then
-		AC_MSG_ERROR("Not found systemctl")
+AC_CHECK_PROG([SYSTEMD], [systemctl], [yes], [no])
+if test "x${SYSTEMD}" = x"yes"; then
+	if test "x${enable_systemd}" = x"yes" -o "x${enable_systemd}" = x"auto"; then
+		WITH_LIST="${WITH_LIST} --with systemd"
+		PACKAGE_FEATURES="$PACKAGE_FEATURES systemd"
 	fi
-	WITH_LIST="${WITH_LIST} --with systemd"
-	PACKAGE_FEATURES="$PACKAGE_FEATURES systemd"
+elif test "x${enable_systemd}" = x"yes"; then
+	AC_MSG_ERROR("Not found systemctl")
 fi
+
+AC_MSG_RESULT([  WITH_LIST        = ${WITH_LIST}])
+AC_MSG_RESULT([  PACKAGE_FEATURES = ${PACKAGE_FEATURES}])
 
 # Checks for typedefs, structures, and compiler characteristics.
 dnl Fix default variables - "prefix" variable if not specified
