@@ -32,6 +32,9 @@ pacemaker_version=1.1
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 PKG_CHECK_MODULES([COROSYNC], [corosync >= ${corosync_version}])
 PKG_CHECK_MODULES([PACEMAKER], [pacemaker >= ${pacemaker_version}])
+PKG_CHECK_MODULES([PACEMAKER2], [pacemaker >= 1.1.13],
+	AC_DEFINE_UNQUOTED([PACEMAKER_GE_1113], 1),
+	AC_DEFINE_UNQUOTED([PACEMAKER_GE_1113], 0))
 AC_CHECK_LIB([cmap],
 	[cmap_track_add], 
 	[], 
