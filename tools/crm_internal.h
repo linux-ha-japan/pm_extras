@@ -1,4 +1,9 @@
 /* crm_internal.h */
+/* NOTE:
+     This file is excerpted from the Pacemaker-1.1.12 source file for ifcheckd
+     and needs to be updated accordingly if those interfaces would be
+     changed in the future version.
+*/
 
 /*
  * Copyright (C) 2006 - 2008
@@ -37,3 +42,11 @@ struct crm_option {
     const char *desc;
     long flags;
 };
+
+void crm_set_options(const char *short_options, const char *usage, struct crm_option *long_options,
+                     const char *app_desc);
+int crm_get_option(int argc, char **argv, int *index);
+int crm_help(char cmd, int exit_code);
+
+int crm_pid_active(long pid);
+void crm_make_daemon(const char *name, gboolean daemonize, const char *pidfile);
