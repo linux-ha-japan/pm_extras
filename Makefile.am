@@ -1,11 +1,11 @@
 MAINTAINERCLEANFILES = Makefile.in
 
 SUBDIRS		= resources tools
-doc_DATA	= README HowToBuild_pm_extras.txt
+doc_DATA	= README
 
 SPEC                    = $(PACKAGE_NAME).spec
 TARFILE                 = $(PACKAGE_NAME)-$(VERSION).tar.gz
-EXTRA_DIST              = HowToBuild_pm_extras.txt $(SPEC) tools
+EXTRA_DIST              = $(SPEC) tools
 
 $(TARFILE):
 	$(MAKE) dist
