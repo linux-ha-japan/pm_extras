@@ -3,7 +3,7 @@ MAINTAINERCLEANFILES	= Makefile.in
 OCFHBDIR		= $(OCFDIR)/heartbeat
 
 ocfdir			= $(OCFHBDIR)
-ocf_SCRIPTS		= NVclient VIPcheck hulft
+ocf_SCRIPTS		= VIPcheck hulft
 
 extdir			= $(EXTDIR)
 ext_SCRIPTS		= stonith-helper
