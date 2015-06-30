@@ -3,7 +3,7 @@
 ########################################
 %define __check_files %{nil}
 %define name pm_extras
-%define version 2.0
+%define version @VERSION@
 %define release 1%{?dist}
 %define prefix /usr
 %define libdir	%{_libdir}
