@@ -27,12 +27,14 @@
 # Defaults
 OCF_RESKEY_hulexep_default=/usr/local/HULFT/bin
 OCF_RESKEY_hulpath_default=/mnt/shareddisk/HULFT/etc
+OCF_RESKEY_huluser_default=root
 OCF_RESKEY_start_opts_default=""
 OCF_RESKEY_huldname_default=""
 OCF_RESKEY_sync_stop_default=10
 
 : ${OCF_RESKEY_hulexep=${OCF_RESKEY_hulexep_default}}
 : ${OCF_RESKEY_hulpath=${OCF_RESKEY_hulpath_default}}
+: ${OCF_RESKEY_huluser=${OCF_RESKEY_huluser_default}}
 : ${OCF_RESKEY_start_opts=${OCF_RESKEY_start_opts_default}}
 : ${OCF_RESKEY_sync_stop=${OCF_RESKEY_sync_stop_default}}
 
@@ -70,6 +72,17 @@ HULPATH path
 </longdesc>
 <shortdesc lang="en">HULPATH</shortdesc>
 <content type="string" default="${OCF_RESKEY_hulpath_default}" />
+</parameter>
+
+<parameter name="huluser" unique="0" required="0">
+<longdesc lang="en">
+HULFT user who start, monitor, stop HULFT.
+
+This parameter is only supported on HULFT8 or later.
+DO NOT SET this parameter on HULFT 7 or less.
+</longdesc>
+<shortdesc lang="en">HULFT user</shortdesc>
+<content type="string" default="${OCF_RESKEY_huluser_default}" />
 </parameter>
 
 <parameter name="sync_stop" unique="0" required="0">
@@ -125,6 +138,21 @@ hulft_methods() {
 EOF
 }
 
+exec_command() {
+    local command=$1
+
+    if [ "$OCF_RESKEY_huluser" = "root" ]; then
+        $command
+    else
+        su -l $OCF_RESKEY_huluser -c "export HULPATH=\"$HULPATH\"; \
+                                      export HULEXEP=\"$HULEXEP\"; \
+                                      export PATH=\"$PATH\"; \
+                                      $command"
+    fi
+
+    return $?
+}
+
 hulft_start() {
     if hulft_status; then
         ocf_log info "HULFT($OCF_RESKEY_huldname) already running. "
@@ -132,7 +160,7 @@ hulft_start() {
     fi
 
     ocf_log info "starting HULFT($OCF_RESKEY_huldname) : $HULBIN -start $OCF_RESKEY_start_opts"
-    $HULBIN -start $OCF_RESKEY_start_opts
+    exec_command "$HULBIN -start $OCF_RESKEY_start_opts"
     rc=$?
     if [ $rc -ne 0 ]; then
         ocf_exit_reason "cannot start HULFT($OCF_RESKEY_huldname):$rc"
@@ -150,11 +178,11 @@ hulft_stop() {
     fi
 
     ocf_log info "stopping HULFT($OCF_RESKEY_huldname) synchronously."
-    $HULBIN -stop -t -timeout $OCF_RESKEY_sync_stop
+    exec_command "$HULBIN -stop -t -timeout $OCF_RESKEY_sync_stop"
     rc=$?
     if [ $rc -ne 0 ]; then
         ocf_log info "cannot stop HULFT($OCF_RESKEY_huldname):$rc synchronously. escalate to a forced stop"
-        $HULBIN -stop -f -timeout 10
+        exec_command "$HULBIN -stop -f -timeout 10"
         rc=$?
         if [ $rc -ne 0 ]; then
             ocf_exit_reason "cannot stop HULFT($OCF_RESKEY_huldname):$rc"
@@ -165,7 +193,7 @@ hulft_stop() {
 }
 
 hulft_status() {
-    $HULBIN -status
+    exec_command "$HULBIN -status"
     rc=$?
     if [ $rc -ne 0 ]; then
         return 1
@@ -192,6 +220,15 @@ hulft_validate_all() {
     if ! ocf_is_probe; then
         if [ ! -d $OCF_RESKEY_hulpath ]; then
             ocf_exit_reason "hulpath parameter is invalid : $OCF_RESKEY_hulpath"
+            return $OCF_ERR_PERM
+        fi
+    fi
+
+    if [ "$OCF_RESKEY_huluser" != "root" ]; then
+        getent passwd $OCF_RESKEY_huluser > /dev/null 2>&1
+        rc=$?
+        if [ $rc -ne 0 ]; then
+            ocf_exit_reason "There is no user : $OCF_RESKEY_huluser."
             return $OCF_ERR_PERM
         fi
     fi
