@@ -135,7 +135,7 @@ hulft_start() {
     $HULBIN -start $OCF_RESKEY_start_opts
     rc=$?
     if [ $rc -ne 0 ]; then
-        ocf_log err "cannot start HULFT($OCF_RESKEY_huldname):$rc"
+        ocf_exit_reason "cannot start HULFT($OCF_RESKEY_huldname):$rc"
         return $OCF_ERR_GENERIC
     fi
 
@@ -157,7 +157,7 @@ hulft_stop() {
         $HULBIN -stop -f -timeout 10
         rc=$?
         if [ $rc -ne 0 ]; then
-            ocf_log err "cannot stop HULFT($OCF_RESKEY_huldname):$rc"
+            ocf_exit_reason "cannot stop HULFT($OCF_RESKEY_huldname):$rc"
             return $OCF_ERR_GENERIC
         fi
     fi
@@ -185,13 +185,13 @@ hulft_monitor() {
 
 hulft_validate_all() {
     if [ ! -d $OCF_RESKEY_hulexep ]; then
-    ocf_log err "hulexep parameter is invalid : $OCF_RESKEY_hulexep"
+    ocf_exit_reason "hulexep parameter is invalid : $OCF_RESKEY_hulexep"
         return $OCF_ERR_PERM
     fi
 
     if ! ocf_is_probe; then
         if [ ! -d $OCF_RESKEY_hulpath ]; then
-            ocf_log err "hulpath parameter is invalid : $OCF_RESKEY_hulpath"
+            ocf_exit_reason "hulpath parameter is invalid : $OCF_RESKEY_hulpath"
             return $OCF_ERR_PERM
         fi
     fi
@@ -229,7 +229,7 @@ case "$OCF_RESKEY_huldname" in
     snd)    HULBIN="$OCF_RESKEY_hulexep/hulclustersnd";;
     rcv)    HULBIN="$OCF_RESKEY_hulexep/hulclusterrcv";;
     obs)    HULBIN="$OCF_RESKEY_hulexep/hulclusterobs";;
-    *)      ocf_log err "huldname parameter is invalid : $OCF_RESKEY_huldname"
+    *)      ocf_exit_reason "huldname parameter is invalid : $OCF_RESKEY_huldname"
             exit $OCF_ERR_CONFIGURED;;
 esac
 
