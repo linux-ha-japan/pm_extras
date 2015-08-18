@@ -3,7 +3,7 @@
 ########################################
 %define __check_files %{nil}
 %define name pm_extras
-%define version 2.0
+%define version @VERSION@
 %define release 1%{?dist}
 %define prefix /usr
 %define libdir	%{_libdir}
@@ -81,7 +81,6 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 %{?with_systemd:%attr (644, root, root) %{_unitdir}/ifcheckd.service}
 
 %doc %{_docdir}/pm_extras/README
-%doc %{_docdir}/pm_extras/HowToBuild_pm_extras.txt
 
 %changelog
 * Wed Jun 12 2013 Yuichi SEINO <seino.cluster2@gmail.com>

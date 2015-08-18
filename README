@@ -1,3 +1,25 @@
+= pm_extras README =
+
+== pm_extras パッケージビルド手順 ==
+
+ * ビルドに必要なパッケージ
+   * cluster-glue-libs-devel
+   * corosynclib-devel
+   * pacemaker-libs-devel
+
+ * RPMビルド手順
+{{{
+# ./autogen.sh
+# ./configure
+# make rpm
+
+Wrote: /root/rpmbuild/SRPMS/pm_extras-2.0-1.el6.src.rpm
+Wrote: /root/rpmbuild/RPMS/x86_64/pm_extras-2.0-1.el6.x86_64.rpm
+Wrote: /root/rpmbuild/RPMS/x86_64/pm_extras-debuginfo-2.0-1.el6.x86_64.rpm
+}}}
+
+
+----
 = ifcheckd README =
 
 == 1.はじめに ==

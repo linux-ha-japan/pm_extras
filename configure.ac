@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(pm_extras, 2.0)
+AC_INIT(pm_extras, 2.1)
 dnl Older distros may need: AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)
 AM_INIT_AUTOMAKE
 AC_PROG_CC
@@ -32,6 +32,9 @@ pacemaker_version=1.1
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 PKG_CHECK_MODULES([COROSYNC], [corosync >= ${corosync_version}])
 PKG_CHECK_MODULES([PACEMAKER], [pacemaker >= ${pacemaker_version}])
+PKG_CHECK_MODULES([PACEMAKER2], [pacemaker >= 1.1.13],
+	AC_DEFINE_UNQUOTED([PACEMAKER_GE_1113], 1),
+	AC_DEFINE_UNQUOTED([PACEMAKER_GE_1113], 0))
 AC_CHECK_LIB([cmap],
 	[cmap_track_add], 
 	[], 
@@ -215,15 +218,6 @@ AC_SUBST(CRM_DAEMON_GROUP)
 CRM_DAEMON_USER=`extract_header_define $GLUE_HEADER HA_CCMUSER`
 AC_DEFINE_UNQUOTED(CRM_DAEMON_USER,"$CRM_DAEMON_USER", User to run Pacemaker daemons as)
 AC_SUBST(CRM_DAEMON_USER)
-
-grep "release 6" /etc/redhat-release -q
-if test $? = 0; then
-        rhelver=6
-else
-        rhelver=5
-fi
-RHEL_VER="$rhelver"
-AC_SUBST(RHEL_VER)
 
 # Checks for library functions.
 
