@@ -79,6 +79,11 @@
 #define DEFAULT_INTERVAL 1
 
 /**
+ *
+ *
+ */
+#define PACEMAKERD_SEARCH_KEY "runtime.connections.pacemakerd"
+/**
  * trace faulty key
  */
 #define FAULTY_TRACE_KEY "runtime.totem.pg.mrp.rrp."
@@ -304,6 +309,48 @@ crm_lock_pidfile(const char *filename)
 }
 
 /**
+ * "runtime.connections.pacemakerd" key search function.
+ * If a key exists, Pacemaker has been started.
+ * @return key exists is TRUE, otherwise FALSE
+ */
+static gboolean
+_is_alive_pacemakerd()
+{
+    cmap_handle_t handle;
+    cs_error_t rc;
+    cmap_iter_handle_t iter_handle;
+    char key_name[CMAP_KEYNAME_MAXLEN + 1];
+    size_t value_len;
+    cmap_value_types_t type;
+    gboolean connected = FALSE;
+
+    rc = cmap_initialize(&handle);
+    if (rc != CS_OK) {
+        crm_debug("Failed to initialize the cmap API. Error %d", rc);
+        return FALSE;
+    }
+
+    rc = cmap_iter_init(handle, PACEMAKERD_SEARCH_KEY, &iter_handle);
+    if (rc != CS_OK) {
+        crm_debug("Failed to iter_init the cmap API. Error %d", rc);
+        goto out_free;
+    }
+
+    rc = cmap_iter_next(handle, iter_handle, key_name, &value_len, &type);
+    if (rc == CS_OK) {
+        connected = TRUE;
+    }
+    crm_debug("The key(%s) to cmap is %s", PACEMAKERD_SEARCH_KEY, rc == CS_OK ? "found" : "not found" );
+
+    (void) cmap_iter_finalize(handle, iter_handle);
+
+    out_free : 
+        (void) cmap_finalize(handle);
+
+        return connected;
+}
+
+/**
  * SIGNAL handler function.
  * @param nsig the number of SIGNAL. except as called by signal trap,
  * if this function is called param is -1.
@@ -457,6 +504,12 @@ _attr_iface_finalize(void)
     gboolean rc = FALSE;
 
     crm_debug("Start to finalize attribute information.");
+
+    if (_is_alive_pacemakerd() == FALSE) {
+        crm_debug("Cannot confirm start of pacemakerd.");
+        return FALSE;
+    }
+
     result = corosync_cfg_initialize(&handle, NULL);
     if (result != CS_OK) {
         crm_debug("Could not initialize corosync configuration API error %d",
@@ -514,6 +567,12 @@ _attr_iface_init(void)
     gboolean rc = FALSE;
 
     crm_debug("Start to initialize attribute information.");
+
+    if (_is_alive_pacemakerd() == FALSE) {
+        crm_debug("Cannot confirm start of pacemakerd.");
+        return FALSE;
+    }
+
     result = corosync_cfg_initialize(&handle, NULL);
     if (result != CS_OK) {
         crm_debug("Could not initialize corosync configuration API error %d",
@@ -777,6 +836,11 @@ _cs_cmap_rrp_faulty_key_changed(cmap_handle_t cmap_handle_c,
     int no_retries;
     uint8_t faulty;
     cs_error_t err;
+
+    if (_is_alive_pacemakerd() == FALSE) {
+        crm_debug("Cannot confirm start of pacemakerd.");
+        return;
+    }
 
     result = sscanf(key_name, FAULTY_KEY_SCAN_FORMAT, &iface_no,
             tmp_key);
