@@ -1,0 +1,150 @@
+# pm_extras README
+
+## pm_extras パッケージビルド手順
+
+* ビルドに必要なパッケージ
+  * cluster-glue-libs-devel
+  * corosynclib-devel
+  * pacemaker-libs-devel
+
+* RPMビルド手順
+
+  ```
+  # ./autogen.sh
+  # ./configure
+  # make rpm
+
+  Wrote: /root/rpmbuild/SRPMS/pm_extras-2.0-1.el6.src.rpm
+  Wrote: /root/rpmbuild/RPMS/x86_64/pm_extras-2.0-1.el6.x86_64.rpm
+  Wrote: /root/rpmbuild/RPMS/x86_64/pm_extras-debuginfo-2.0-1.el6.x86_64.rpm
+  ```
+
+
+----
+# ifcheckd README
+
+## 1.はじめに
+* 本デーモンは、Corosync環境においてインターフェースの状態を監視するものです。
+* 監視するインターフェースの情報は、自ノードに接続されている他ノードのインターフェースの状態として表示されます。
+* "crm_mon -A"コマンドを使用して、Corosyncが利用するインターフェースの状態を確認することができます。
+* 本説明では64ビット環境を前提に記述しています。32ビット環境ではインストールされるディレクトリが異なるため、環境に合わせて読み替えてください。
+
+## 2.インストール
+* 本ツールのパッケージ pm_extras-2.0-1.el6.x86_64.rpm をダウンロードします。その後、以下のようにrpmコマンドを使ってインストールします。
+
+  ```
+  # rpm -ivh pm_extras-2.0-1.el6.x86_64.rpm
+  準備中...                ########################################### [100%]
+     1:pm_extras              ########################################### [100%]
+  #
+  ```
+
+  * (注)pm_extras-2.0パッケージはインストールに以下のパッケージを必要とします
+    * pacemaker-1.1.0以上
+    * resource-agents-1.0.3以上
+    * cluster-glue-1.0.6以上
+
+## 3.使用方法
+### 3.1 設定
+* ifcheckdは個別の設定ファイルを持ちません。
+
+### 3.2 起動・停止
+* ifcheckdの起動方法はOSの環境により異なります。
+  * RHEL6系
+
+    ```
+    # initctl start ifcheckd
+    ifcheckd start/running, process 10519
+    ```
+
+  * RHEL7系
+
+    ```
+    # systemctl start ifcheckd
+    ```
+
+* ifcheckdの停止方法はOSの環境により異なります。
+  * RHEL6系
+
+    ```
+    # initctl stop ifcheckd
+    ifcheckd stop/waiting
+    ```
+
+  * RHEL7系
+
+    ```
+    # systemctl stop ifcheckd
+    ```
+
+### 3.3 動作確認
+* ifcheckdが正常に起動していることを"crm_mon -A1"で確認します。
+
+  ```
+  # crm_mon -A1
+  Last updated: Thu Jul 31 18:01:11 2014
+  Last change: Thu Jul 31 14:18:23 2014
+  Stack: corosync
+  Current DC: vm01 (3232261507) - partition with quorum
+  Version: 1.1.12-267effc
+  2 Nodes configured
+  0 Resources configured
+
+
+  Online: [ vm01 vm02 ]
+
+
+  Node Attributes:
+  * Node vm01:
+      + ringnumber_0                      : 192.168.101.131 is UP
+      + ringnumber_1                      : 192.168.102.131 is UP
+  * Node vm02:
+      + ringnumber_0                      : 192.168.101.132 is UP
+      + ringnumber_1                      : 192.168.102.132 is UP
+  ```
+
+* インターフェースの状態を表す属性値は、以下のように表示されます。
+  * 正常時
+
+  ```
+      + ringnumber_0                      : 192.168.101.131 is UP
+  ```
+
+  * 故障時
+
+  ```
+      + ringnumber_0                      : 192.168.101.131 is FAULTY
+  ```
+
+* 属性値が"192.168.101.131 is FAULTY"と表示されたノードのインターフェースは通信ができない状態となっています。直ちに原因を調査し復旧してください。
+* OFFLINE状態のノードのインターフェース情報は表示されません。
+
+## 4.起動オプション一覧
+* -p <file_name>：デーモン化モードでの動作時のpidファイル名の指定。デフォルト：/var/run/ifcheckd.pid
+* -f：フォアグラウンドモードでifcheckdを起動
+* -V：標準エラー出力にログを出力するモードの有効化
+* -$：バージョン情報の表示
+* -?：ヘルプの表示
+
+## 5.ログ一覧
+* 以下にifcheckdが出力するログの一覧を提示します。
+
+  | レベル | 出力内容                                                     | 意味                                     |
+  | ------ | ------------------------------------------------------------ | ---------------------------------------- |
+  | error  | Failed to change link status [ring id=%u, expected state=%s] | インターフェース状態の属性更新に失敗した |
+  | error  | the event isn't exist: event=%u                              | 削除対象のイベントが存在しない |
+  | error  | Failed to fetch key name or ring name: result=%d             | ring名の取得に失敗した |
+  | error  | Failed to fetch key name: tmp_key=%s                         | ringの故障情報が取得できなかった |
+  | error  | Failed to connect cmap.  Error %d                            | cmapとの接続に失敗した |
+  | error  | %s: already running [pid %ld in %s]                          | すでに別のifcheckdが起動している |
+  | error  | Could not lock '%s' for %s: %s (%d)                          | lockfileの処理に失敗した |
+  | notice | Exiting %s                                                   | ifcheckdが終了した |
+  | notice | Stop monitoring interface. cmap connection is destroyed      | cmapとの接続が切断されたため、インターフェースの監視を停止した |
+  | notice | Stop monitoring interface. Notified of Pacemaker stop event  | Pacemakerが停止されたため、インターフェースの監視を停止した |
+  | notice | Start to monitor interface after Pacemaker restarted         | Pacemakerが再起動したため、インターフェースの監視を開始した |
+  | notice | Finished to initialize ifcheckd. cmap_handle created         | cmapとの接続が確立されたため、初期化が完了した |
+  | notice | Starting %s                                                  | ifcheckdが起動した |
+  | info   | Interface link status changed [ring id=%u, state=%s]         | インターフェースの状態が変化した |
+
+  * (注)debugレベルは除外
+
