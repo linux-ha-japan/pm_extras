@@ -1,11 +1,11 @@
 MAINTAINERCLEANFILES = Makefile.in
 
 SUBDIRS		= resources tools
-doc_DATA	= README
+doc_DATA	= README.md
 
 SPEC                    = $(PACKAGE_NAME).spec
 TARFILE                 = $(PACKAGE_NAME)-$(VERSION).tar.gz
-EXTRA_DIST              = $(SPEC) tools
+EXTRA_DIST              = $(SPEC) tools $(doc_DATA)
 
 $(TARFILE):
 	$(MAKE) dist

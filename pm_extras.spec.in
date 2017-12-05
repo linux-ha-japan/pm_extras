@@ -80,7 +80,7 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 
 %{?with_systemd:%attr (644, root, root) %{_unitdir}/ifcheckd.service}
 
-%doc %{_docdir}/pm_extras/README
+%doc %{_docdir}/pm_extras/README.md
 
 %changelog
 * Wed Jun 12 2013 Yuichi SEINO <seino.cluster2@gmail.com>
