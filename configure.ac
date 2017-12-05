@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(pm_extras, 2.3)
+AC_INIT(pm_extras, 2.4)
 dnl Older distros may need: AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)
 AM_INIT_AUTOMAKE
 AC_PROG_CC
