@@ -193,12 +193,35 @@ hulft_stop() {
 }
 
 hulft_status() {
-    exec_command "$HULBIN -status"
+    local timeout
+
+    # The value of -timeout must set between 10 and 60.
+    # NOTICE:
+    # Timeout option (-timeout) is set ONLY for monitor action.
+    # In case of start and stop action, the status of hulft process
+    # is handle adequately by the action.
+    if [ "$__OCF_ACTION" = "monitor" ]; then
+        timeout=$(((OCF_RESKEY_CRM_meta_timeout/1000) - 10))
+
+        if [ $timeout -gt 60 ]; then
+            timeout=60
+        elif [ $timeout -lt 10 ]; then
+            timeout=10
+        fi
+
+        exec_command "$HULBIN -status -timeout $timeout"
+    else
+        exec_command "$HULBIN -status"
+    fi
     rc=$?
-    if [ $rc -ne 0 ]; then
+
+    if [ $rc -eq 0 ]; then
+        return 0
+    elif [ $rc -eq 100 ]; then
+        return 100
+    else 
         return 1
     fi
-    return 0
 }
 
 hulft_monitor() {
