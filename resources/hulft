@@ -154,8 +154,13 @@ exec_command() {
 }
 
 hulft_start() {
-    if hulft_status; then
-        ocf_log info "HULFT($OCF_RESKEY_huldname) already running. "
+    local rc
+
+    hulft_status
+    rc=$?
+
+    if [ $rc -eq 0 ]; then
+        ocf_log info "HULFT($OCF_RESKEY_huldname) already running."
         return $OCF_SUCCESS
     fi
 
@@ -171,8 +176,12 @@ hulft_start() {
 }
 
 hulft_stop() {
-    if ! hulft_status
-    then
+    local rc
+
+    hulft_status
+    rc=$?
+
+    if [ $rc -eq $OCF_NOT_RUNNING ]; then
         ocf_log info "HULFT($OCF_RESKEY_huldname) already stopped"
         return $OCF_SUCCESS
     fi
@@ -193,22 +202,78 @@ hulft_stop() {
 }
 
 hulft_status() {
-    exec_command "$HULBIN -status"
-    rc=$?
-    if [ $rc -ne 0 ]; then
-        return 1
+    local timeout
+    local process_path
+
+    case "$OCF_RESKEY_huldname" in
+        snd)    process_path="$OCF_RESKEY_hulexep/hulsndd";;
+        rcv)    process_path="$OCF_RESKEY_hulexep/hulrcvd";;
+        obs)    process_path="$OCF_RESKEY_hulexep/hulobsd";;
+    esac
+
+    # The value of -timeout must set between 10 and 60.
+    # NOTICE:
+    # Timeout option (-timeout) is set ONLY for monitor action.
+    # In case of start and stop action, the status of hulft process
+    # is handle adequately by the action.
+    if [ "$__OCF_ACTION" = "monitor" ]; then
+        timeout=$(((OCF_RESKEY_CRM_meta_timeout/1000) - 10))
+
+        if [ $timeout -gt 60 ]; then
+            timeout=60
+        elif [ $timeout -lt 10 ]; then
+            timeout=10
+        fi
+
+        exec_command "$HULBIN -status -timeout $timeout"
+    else
+        exec_command "$HULBIN -status"
     fi
-    return 0
+    rc=$?
+
+    # Confirm whether the process is alive or stopped or hanged .
+    # return value:
+    # 0: Success
+    # 100: Timed Out
+    # 111 or 112 or 113: processes may be not running.
+    # 118: Invalid HULPATH, but this is valid at probe.
+    if [ $rc -eq 0 ]; then
+        return 0
+    elif [ $rc -eq 100 ]; then
+        return 100
+    elif [ $rc -eq 111 ] || [ $rc -eq 112 ] || [ $rc -eq 113 ]; then
+        pgrep -f $process_path > /dev/null 2>&1
+
+        if [ $? -ne 0 ]; then
+            return $OCF_NOT_RUNNING
+        else
+            return $rc
+        fi
+    elif ocf_is_probe && [ $rc -eq 118 ]; then
+        return $OCF_NOT_RUNNING
+    else
+        return $rc
+    fi
 }
 
 hulft_monitor() {
-    if ! hulft_status
-    then
-    ocf_log info "HULFT($OCF_RESKEY_huldname) is down"
-    return $OCF_NOT_RUNNING
-    fi
+    local rc
 
-    return $OCF_SUCCESS
+    hulft_status
+    rc=$?
+
+    if [ $rc -eq 0 ]; then
+        return $OCF_SUCCESS
+    elif [ $rc -eq $OCF_NOT_RUNNING ]; then
+        ocf_log info "HULFT($OCF_RESKEY_huldname) is down"
+        return $OCF_NOT_RUNNING
+    elif [ $rc -eq 100 ]; then
+        ocf_exit_reason "Time out has been occured to get HULFT($OCF_RESKEY_huldname) status."
+        return $OCF_ERR_GENERIC
+    else
+        ocf_exit_reason "unknown error is occured. Please check hulft status. (error code: $?)"
+        return $OCF_ERR_GENERIC
+    fi
 }
 
 hulft_validate_all() {
