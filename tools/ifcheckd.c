@@ -161,6 +161,12 @@ static gboolean conf[IF_CH_MAX];
 static cmap_handle_t cmap_handle;
 
 /**
+ * cmap track handler
+ */
+static cmap_track_handle_t track_handle_rrp_faulty_key_changed;
+static cmap_track_handle_t track_handle_connections_key_changed;
+
+/**
  * cmap fd source
  */
 static mainloop_io_t* cmap_source;
@@ -883,7 +889,6 @@ _cs_cmap_init(void)
 {
     cs_error_t rc;
     int cmap_fd = 0;
-    cmap_track_handle_t track_handle;
 
     static struct mainloop_fd_callbacks cmap_fd_callbacks = {
             .dispatch = _cs_cmap_dispatch,
@@ -917,7 +922,7 @@ _cs_cmap_init(void)
             CMAP_TRACK_ADD | CMAP_TRACK_MODIFY | CMAP_TRACK_PREFIX,
             _cs_cmap_rrp_faulty_key_changed,
             NULL,
-            &track_handle);
+            &track_handle_rrp_faulty_key_changed);
     if (rc != CS_OK) {
         crm_debug("Failed to track the faulty key. Error %d", rc);
         goto bail2;
@@ -928,7 +933,7 @@ _cs_cmap_init(void)
             CMAP_TRACK_DELETE | CMAP_TRACK_PREFIX,
             _cs_cmap_connections_key_changed,
             NULL,
-            &track_handle);
+            &track_handle_connections_key_changed);
     if (rc != CS_OK) {
         crm_debug("Failed to track the connections key. Error %d", rc);
         goto bail2;
@@ -940,6 +945,8 @@ _cs_cmap_init(void)
     mainloop_del_fd(cmap_source);
 
     bail:
+    cmap_track_delete(cmap_handle, track_handle_rrp_faulty_key_changed);
+    cmap_track_delete(cmap_handle, track_handle_connections_key_changed);
     cmap_finalize(cmap_handle);
     cmap_handle = 0;
     return FALSE;
@@ -984,6 +991,8 @@ void
 ifcheckd_finalize(void)
 {
     (void)_attr_iface_finalize();
+    (void)cmap_track_delete(cmap_handle, track_handle_rrp_faulty_key_changed);
+    (void)cmap_track_delete(cmap_handle, track_handle_connections_key_changed);
     (void)cmap_finalize(cmap_handle);
     cmap_handle = 0;
 }
